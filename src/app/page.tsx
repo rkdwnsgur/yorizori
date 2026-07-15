@@ -671,6 +671,27 @@ export default function MainApp() {
     setNickname(newNickname);
     setFamilyCount(newFamilyCount);
 
+    // 로컬 스토리지 가상 세션 데이터 동기화 업데이트 (새로고침 시 영구 반영)
+    if (typeof window !== 'undefined') {
+      const mockSessionStr = localStorage.getItem('yorijori_mock_session');
+      if (mockSessionStr) {
+        try {
+          const sessionObj = JSON.parse(mockSessionStr);
+          sessionObj.nickname = newNickname;
+          sessionObj.familyCount = newFamilyCount;
+          localStorage.setItem('yorijori_mock_session', JSON.stringify(sessionObj));
+        } catch (e) {
+          console.error('로컬 세션 갱신 실패:', e);
+        }
+      } else {
+        localStorage.setItem('yorijori_mock_session', JSON.stringify({
+          userId: userId || 'mock_user_123',
+          nickname: newNickname,
+          familyCount: newFamilyCount
+        }));
+      }
+    }
+
     if (userId && !userId.startsWith('mock_')) {
       try {
         await supabase.from('profiles').update({

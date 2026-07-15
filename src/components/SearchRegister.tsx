@@ -76,11 +76,10 @@ export default function SearchRegister({
   const renderStorageIcon = (type: StorageUnit['type'], sizeClass = "w-9 h-9") => {
     switch (type) {
       case '냉장고':
-        return <Refrigerator className={`${sizeClass} text-brand-green`} />; // 진짜 스탠드 냉장고
+      case '김치냉장고':
+        return <Refrigerator className={`${sizeClass} text-brand-green`} />; // 냉장고 & 김치냉장고 통일성 부여
       case '냉동고':
         return <Snowflake className={`${sizeClass} text-sky-400`} />; // 냉동고
-      case '김치냉장고':
-        return <Archive className={`${sizeClass} text-brand-green`} />; // 가로가 더 넓은 뚜껑식 김치냉장고 룩의 보관함 아이콘
       case '실온보관':
         return <ShoppingBasket className={`${sizeClass} text-amber-600`} />; // 식당용 식자재 바구니 선반
       default:
