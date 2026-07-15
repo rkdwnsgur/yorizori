@@ -6,21 +6,21 @@ import Splash from '../components/Splash';
 import HomeDashboard from '../components/HomeDashboard';
 import SearchRegister from '../components/SearchRegister';
 import AiRecipes from '../components/AiRecipes';
-import Store from '../components/Store';
+import RecipeChatbot from '../components/RecipeChatbot';
 import MyPage from '../components/MyPage';
 import Checkout from '../components/Checkout';
 import AuthOnboarding from '../components/AuthOnboarding'; // 신규 인증 컴포넌트 임포트
 import Notifications, { AppNotification as NotifType } from '../components/Notifications';
 import { supabase } from '../utils/supabase'; // Supabase 브라우저 클라이언트 임포트
-import { Share2, Edit2, Check, X, Bell, Award, Sparkles, BookOpen, Wallet, Home, Camera, User, ShoppingBag, Eye, LogOut } from 'lucide-react';
+import { Share2, Edit2, Check, X, Bell, Award, Sparkles, BookOpen, Wallet, Home, Camera, User, MessageSquare, Eye, LogOut } from 'lucide-react';
 
 export default function MainApp() {
   const [showSplash, setShowSplash] = useState(true);
-  const [currentTab, setCurrentTab] = useState<'home' | 'search' | 'recipe' | 'notification' | 'mypage' | 'store' | 'camera' | 'checkout'>('store');
+  const [currentTab, setCurrentTab] = useState<'home' | 'search' | 'recipe' | 'notification' | 'mypage' | 'chatbot' | 'camera' | 'checkout'>('home');
   const [homeSubTab, setHomeSubTab] = useState<'fridge' | 'ledger'>('ledger');
   
   // 카메라 및 결제 이전 탭 기록용
-  const [prevTab, setPrevTab] = useState<'home' | 'search' | 'recipe' | 'notification' | 'mypage' | 'store' | 'checkout'>('store');
+  const [prevTab, setPrevTab] = useState<'home' | 'search' | 'recipe' | 'notification' | 'mypage' | 'chatbot' | 'checkout'>('home');
 
   // Supabase Auth 세션 및 로딩 상태
   const [userId, setUserId] = useState<string | null>(() => {
@@ -136,19 +136,7 @@ export default function MainApp() {
   const [purchasedCoupons, setPurchasedCoupons] = useState<string[]>([]);
 
   // 저장된 레시피
-  const [savedRecipes, setSavedRecipes] = useState<Recipe[]>([
-    {
-      id: 'rec_3',
-      name: '우유 달걀찜 (초간편 푸딩 식감)',
-      ingredients: ['매일 우유 900ml', '신선란 10구'],
-      instructions: [
-        '계란 2알과 우유 100ml, 물 50ml를 넣고 거품기로 골고루 저어줍니다.',
-        '체에 두 번 걸러 몽글몽글한 알끈을 깨끗이 제거합니다.',
-        '그릇에 계란물을 담고 랩을 씌운 뒤, 전자레인지에 3분 30초 돌려줍니다.',
-      ],
-      savingsAmount: 6000,
-    }
-  ]);
+  const [savedRecipes, setSavedRecipes] = useState<Recipe[]>([]);
 
   // 알림 상태
   const [notifications, setNotifications] = useState<NotifType[]>([
@@ -901,8 +889,8 @@ export default function MainApp() {
             <div className="flex items-center gap-2">
               <span
                 onClick={() => {
-                  setCurrentTab('store');
-                  triggerToast('🏠 요리조리 홈 상점으로 이동했습니다.');
+                  setCurrentTab('home');
+                  triggerToast('🏠 요리조리 홈으로 이동했습니다.');
                 }}
                 className="text-xs font-black text-white bg-brand-green px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-brand-green-hover transition-all active:scale-95 select-none shadow-sm"
               >
@@ -1078,12 +1066,12 @@ export default function MainApp() {
                 </div>
               )}
 
-              {currentTab === 'store' && (
-                <Store
-                  totalSaved={totalSaved}
-                  badges={badges}
-                  spentPoints={spentPoints}
-                  onBuyCoupon={handleBuyCoupon}
+              {currentTab === 'chatbot' && (
+                <RecipeChatbot
+                  items={items}
+                  storages={storages}
+                  onSaveRecipe={handleSaveRecipe}
+                  savedRecipes={savedRecipes}
                 />
               )}
 
@@ -1221,15 +1209,15 @@ export default function MainApp() {
               <span className="text-[8px] text-gray-500 mt-0.5 font-bold">촬영등록</span>
             </button>
 
-            {/* D. 상점 */}
+            {/* D. 레시피 챗봇 */}
             <button
-              onClick={() => setCurrentTab('store')}
+              onClick={() => setCurrentTab('chatbot')}
               className={`flex-1 flex flex-col items-center gap-0.5 transition-all ${
-                currentTab === 'store' ? 'text-brand-green font-bold scale-105' : 'text-gray-400 hover:text-gray-600'
+                currentTab === 'chatbot' ? 'text-brand-green font-bold scale-105' : 'text-gray-400 hover:text-gray-600'
               }`}
             >
-              <ShoppingBag className="w-[18px] h-[18px]" />
-              <span className="text-[8px] mt-0.5">상점</span>
+              <MessageSquare className="w-[18px] h-[18px]" />
+              <span className="text-[8px] mt-0.5">AI챗봇</span>
             </button>
 
             {/* E. 마이페이지 */}
