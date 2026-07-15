@@ -56,18 +56,29 @@ export default function AuthOnboarding({ onAuthComplete }: AuthOnboardingProps) 
       }
     } catch (err: any) {
       console.error('로그인 에러:', err);
-      if (
+      const isMockCondition = 
         email === 'test@test.com' ||
         err.message?.includes('FetchError') ||
         err.message?.includes('ApiKey') ||
         err.message?.includes('fetch') ||
         err.message?.includes('NetworkError') ||
-        process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('your-project-ref')
-      ) {
+        process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('your-project-ref');
+
+      if (isMockCondition) {
         alert('💡 (로컬 테스트 모드) 가상 로그인을 완료했습니다.');
         onAuthComplete('mock_user_123', '민수', 1);
       } else {
-        alert(`로그인 실패: ${err.message || '이메일 또는 비밀번호가 올바르지 않습니다.'}`);
+        let errorMsg = `로그인 실패: ${err.message || '이메일 또는 비밀번호가 올바르지 않습니다.'}`;
+        if (err.message?.includes('Email not confirmed') || err.message?.includes('confirm')) {
+          errorMsg += '\n\n💡 [해결 방법]: Supabase Auth 이메일 인증이 켜져 있습니다. 입력하신 이메일의 메일함을 열어 인증 링크를 클릭하시거나, Supabase 대시보드 -> Authentication -> Providers -> Email 메뉴에서 [Confirm email] 설정을 꺼(Disabled) 주시면 인증 절차 없이 바로 로그인이 가능합니다!';
+        }
+
+        const confirmMock = window.confirm(
+          `${errorMsg}\n\n💡 (테스트 폴백) 실제 Supabase 계정 대신 임시 로컬 가상 계정으로 즉시 우회하여 로그인하시겠습니까?`
+        );
+        if (confirmMock) {
+          onAuthComplete('mock_user_123', '임시회원', 1);
+        }
       }
     } finally {
       setIsLoading(false);
