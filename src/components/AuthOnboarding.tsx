@@ -118,18 +118,31 @@ export default function AuthOnboarding({ onAuthComplete }: AuthOnboardingProps) 
       }
     } catch (err: any) {
       console.error('회원가입 에러:', err);
-      if (
+      const isMockCondition = 
         err.message?.includes('FetchError') ||
         err.message?.includes('ApiKey') ||
         err.message?.includes('fetch') ||
         err.message?.includes('NetworkError') ||
-        process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('your-project-ref')
-      ) {
+        process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('your-project-ref');
+
+      if (isMockCondition) {
         // 가상 연동 바이패스
         setUserId('mock_user_123');
         setAuthTab('onboarding');
       } else {
-        alert(`회원가입 실패: ${err.message || '가입 도중 알 수 없는 에러가 발생했습니다.'}`);
+        let errorMsg = `회원가입 실패: ${err.message || '가입 도중 알 수 없는 에러가 발생했습니다.'}`;
+        
+        if (err.message?.includes('rate limit') || err.status === 429) {
+          errorMsg += '\n\n💡 [해결 방법]: 무료 티어 Supabase 프로젝트의 이메일 발송 제한(시간당 3회)을 초과했습니다. [Supabase Console -> Authentication -> Providers -> Email] 에서 [Confirm email] 설정을 꺼(Disabled) 주시면 인증 메일 발송 없이 즉시 무제한 회원가입이 가능합니다!';
+        }
+
+        const confirmMock = window.confirm(
+          `${errorMsg}\n\n💡 (테스트 폴백) 임시 로컬 가상 계정으로 즉시 우회하여 온보딩으로 진행하시겠습니까?`
+        );
+        if (confirmMock) {
+          setUserId('mock_user_123');
+          setAuthTab('onboarding');
+        }
       }
     } finally {
       setIsLoading(false);
