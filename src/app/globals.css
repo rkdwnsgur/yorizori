@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+:root {
+  --background: #FCFDFD;
+  --foreground: #1D211F;
+  --brand-green: #4E7A63;
+  --brand-green-hover: #3E624F;
+  --brand-green-light: #EBF2EE;
+  --brand-grey: #F3F5F4;
+  --brand-coral: #E07A5F;
+  --brand-orange: #F4A261;
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand-green: var(--brand-green);
+  --color-brand-green-hover: var(--brand-green-hover);
+  --color-brand-green-light: var(--brand-green-light);
+  --color-brand-grey: var(--brand-grey);
+  --color-brand-coral: var(--brand-coral);
+  --color-brand-orange: var(--brand-orange);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overflow-x: hidden;
+}
+
+/* 스무스 스크롤 및 스크롤바 미니멀화 */
+html {
+  scroll-behavior: smooth;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--brand-grey);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-green-light);
+}
+
