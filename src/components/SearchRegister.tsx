@@ -147,6 +147,52 @@ export default function SearchRegister({
           </button>
         </div>
 
+        {/* 소비기한 임박 식품 긴급 표시 (D-3 이내) */}
+        {(() => {
+          const urgentItems = items.filter((item) => {
+            const d = getDDay(item.expiryDate);
+            return d >= 0 && d <= 3;
+          });
+          if (urgentItems.length === 0) return null;
+
+          return (
+            <div className="bg-brand-coral/5 p-4.5 rounded-[22px] border border-brand-coral/10 text-left flex flex-col gap-3 flex-shrink-0 animate-fade-in">
+              <div className="flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-brand-coral animate-pulse" />
+                <span className="text-[10px] font-black text-brand-coral uppercase tracking-wide">
+                  전체 보관소 임박 식품 (D-3 이내)
+                </span>
+              </div>
+              <div className="flex gap-3 overflow-x-auto scrollbar-none pb-0.5">
+                {urgentItems.map((item) => {
+                  const dDay = getDDay(item.expiryDate);
+                  return (
+                    <div
+                      key={item.id}
+                      className="bg-white px-3 py-2.5 rounded-xl border border-brand-grey shadow-xs flex-shrink-0 flex flex-col justify-between min-w-[115px]"
+                    >
+                      <div>
+                        <div className="text-[7.5px] font-bold text-gray-400 bg-brand-grey px-1.5 py-0.5 rounded inline-block truncate max-w-[85px]">
+                          {storages.find((st) => st.id === item.storageId)?.name || '보관소'}
+                        </div>
+                        <h4 className="text-[9.5px] font-black text-gray-800 mt-1.5 truncate w-[90px]">
+                          {item.name}
+                        </h4>
+                      </div>
+                      <div className="flex items-center justify-between mt-2.5">
+                        <span className="text-[8px] text-gray-400 font-bold">{item.quantity}</span>
+                        <span className="text-[8px] font-black text-brand-coral bg-brand-coral/10 px-1.5 py-0.5 rounded">
+                          D-{dDay === 0 ? 'Day' : dDay}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* 뭉툭하고 미려한 네모 냉장고 카드 그리드 (2열 바둑판 배치) */}
         <div className="grid grid-cols-2 gap-4">
           {storages.map((s) => {
