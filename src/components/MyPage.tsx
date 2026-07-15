@@ -15,6 +15,7 @@ interface MyPageProps {
   onUpgradeSubscription: (plan: 'free' | 'pro') => void;
   purchasedCoupons?: string[];
   onNavigateToCheckout: () => void;
+  onLogout?: () => void; // 로그아웃 콜백 추가
 }
 
 export default function MyPage({
@@ -28,6 +29,7 @@ export default function MyPage({
   onUpgradeSubscription,
   purchasedCoupons = [],
   onNavigateToCheckout,
+  onLogout, // 로그아웃 바인딩
 }: MyPageProps) {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editNickname, setEditNickname] = useState(nickname);
@@ -44,7 +46,7 @@ export default function MyPage({
   };
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto pb-24 px-4 pt-4 bg-[#FCFDFD]">
+    <div className="flex flex-col h-full overflow-y-auto pb-36 px-4 pt-4 bg-[#FCFDFD]">
       {/* 1. 프로필 영역 */}
       <div className="bg-white p-5 rounded-2xl border border-brand-grey shadow-sm mb-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -201,6 +203,15 @@ export default function MyPage({
           </div>
         </div>
       </div>
+
+      {/* 5. 로그아웃 버튼 대형 배치 */}
+      <button
+        onClick={onLogout}
+        className="w-full bg-white hover:bg-red-50 text-red-500 border border-red-100 hover:border-red-200 text-xs font-black py-4 rounded-2xl shadow-xs transition-colors mt-6 flex items-center justify-center gap-1.5 active:scale-98"
+      >
+        <span>🚪 로그아웃하기</span>
+      </button>
+      <div className="h-8 flex-shrink-0" />
 
       {/* 모달 1. 프로필 수정 */}
       {showEditProfile && (

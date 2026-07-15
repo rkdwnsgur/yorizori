@@ -1157,6 +1157,7 @@ export default function MainApp() {
                     setPrevTab(currentTab);
                     setCurrentTab('checkout');
                   }}
+                  onLogout={handleLogout}
                 />
               )}
 
