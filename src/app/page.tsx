@@ -237,14 +237,14 @@ export default function MainApp() {
   // 카메라 분석 단계 상태
   const [cameraStep, setCameraStep] = useState<'viewfinder' | 'scanning' | 'confirm'>('viewfinder');
 
-  // 모킹된 영수증 인식 데이터
-  const mockedParsedItems = [
+  // 영수증 스캔 후 수정할 임시 식재료 리스트 상태
+  const [parsedItems, setParsedItems] = useState<Omit<IngredientItem, 'id' | 'registeredAt' | 'storageId'>[]>([
     { name: '대파 1단', quantity: '1단', category: '야채' as const, expiryDate: new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0], price: 2800 },
     { name: '신선란 10구', quantity: '1팩', category: '기타' as const, expiryDate: new Date(Date.now() + 86400000 * 15).toISOString().split('T')[0], price: 3980 },
     { name: '매일 우유 900ml', quantity: '1개', category: '유제품' as const, expiryDate: new Date(Date.now() + 86400000 * 4).toISOString().split('T')[0], price: 2900 },
     { name: '한돈 삼겹살 400g', quantity: '1팩', category: '육류/해물' as const, expiryDate: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0], price: 12500 },
-  ];
-  const totalReceiptCost = mockedParsedItems.reduce((acc, c) => acc + c.price, 0);
+  ]);
+  const totalReceiptCost = parsedItems.reduce((acc, c) => acc + c.price, 0);
 
   // 토스트 메시지
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -1115,6 +1115,12 @@ export default function MainApp() {
   // 카메라 셔터 클릭
   const startReceiptScan = () => {
     setCameraStep('scanning');
+    setParsedItems([
+      { name: '대파 1단', quantity: '1단', category: '야채' as const, expiryDate: new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0], price: 2800 },
+      { name: '신선란 10구', quantity: '1팩', category: '기타' as const, expiryDate: new Date(Date.now() + 86400000 * 15).toISOString().split('T')[0], price: 3980 },
+      { name: '매일 우유 900ml', quantity: '1개', category: '유제품' as const, expiryDate: new Date(Date.now() + 86400000 * 4).toISOString().split('T')[0], price: 2900 },
+      { name: '한돈 삼겹살 400g', quantity: '1팩', category: '육류/해물' as const, expiryDate: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0], price: 12500 },
+    ]);
     setTimeout(() => {
       setCameraStep('confirm');
     }, 1500);
@@ -1122,7 +1128,7 @@ export default function MainApp() {
 
   // 카메라 촬영 완료 -> 일괄 등록 및 냉장고 탭 복귀
   const confirmReceiptRegister = () => {
-    handleAddMultipleItems(mockedParsedItems, totalReceiptCost);
+    handleAddMultipleItems(parsedItems, totalReceiptCost);
     setCameraStep('viewfinder');
     setCurrentTab('search');
   };
@@ -1274,37 +1280,106 @@ export default function MainApp() {
                   )}
 
                   {cameraStep === 'confirm' && (
-                    <div className="flex-1 flex flex-col justify-center my-6 animate-fade-in text-gray-800">
-                      <div className="bg-white rounded-2xl p-5 w-full shadow-2xl flex flex-col">
-                        <div className="flex items-center gap-1.5 mb-4 border-b pb-3">
-                          <Check className="w-5 h-5 text-brand-green" />
-                          <h3 className="text-xs font-extrabold text-gray-800">분석 완료! 등록 대기 내역</h3>
+                    <div className="flex-1 flex flex-col justify-center my-4 animate-fade-in text-gray-800">
+                      <div className="bg-white rounded-2xl p-4 w-full shadow-2xl flex flex-col">
+                        <div className="flex items-center gap-1.5 mb-3 border-b pb-2">
+                          <Check className="w-4 h-4 text-brand-green" />
+                          <h3 className="text-xs font-black text-gray-800">분석 완료! 등록 대기 및 일괄 검수</h3>
                         </div>
 
-                        <div className="flex flex-col gap-2.5 max-h-[170px] overflow-y-auto mb-4 pr-1">
-                          {mockedParsedItems.map((item, idx) => (
+                        <div className="flex flex-col gap-3 max-h-[220px] overflow-y-auto mb-3.5 pr-1">
+                          {parsedItems.map((item, idx) => (
                             <div
                               key={idx}
-                              className="bg-brand-grey/60 p-2.5 rounded-lg flex items-center justify-between text-[10px]"
+                              className="bg-brand-grey/80 p-3 rounded-xl border border-brand-grey flex flex-col gap-2 text-[10px] relative transition-all"
                             >
-                              <div>
-                                <div className="font-extrabold text-gray-800">{item.name}</div>
-                                <div className="text-[8px] text-gray-400 mt-0.5">
-                                  분류: {item.category} | 수량: {item.quantity}
-                                </div>
+                              {/* 품목 제외 단추 */}
+                              <button
+                                onClick={() => {
+                                  setParsedItems(prev => prev.filter((_, i) => i !== idx));
+                                  triggerToast('🗑️ 스캔 등록 대기 품목이 제외되었습니다.');
+                                }}
+                                className="absolute top-2.5 right-2.5 text-gray-400 hover:text-brand-coral transition-colors"
+                                title="이 품목 제외"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* 1행: 이름 & 카테고리 */}
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={item.name}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setParsedItems(prev => prev.map((p, i) => i === idx ? { ...p, name: val } : p));
+                                  }}
+                                  className="flex-1 bg-white border border-gray-200 rounded px-1.5 py-0.5 font-extrabold text-gray-800"
+                                  placeholder="식품명"
+                                />
+                                <select
+                                  value={item.category}
+                                  onChange={(e) => {
+                                    const val = e.target.value as any;
+                                    setParsedItems(prev => prev.map((p, i) => i === idx ? { ...p, category: val } : p));
+                                  }}
+                                  className="bg-white border border-gray-200 rounded px-1 py-0.5 text-[9px] font-bold text-gray-600 focus:outline-none focus:border-brand-green"
+                                >
+                                  <option value="야채">야채</option>
+                                  <option value="과일">과일</option>
+                                  <option value="육류/해물">육류/해물</option>
+                                  <option value="유제품">유제품</option>
+                                  <option value="기타">기타</option>
+                                </select>
                               </div>
-                              <div className="text-right">
-                                <div className="font-bold text-gray-700">{item.price.toLocaleString()}원</div>
-                                <div className="text-[8px] text-brand-coral font-bold mt-0.5">
-                                  소비기한: {item.expiryDate}
+
+                              {/* 2행: 수량, 가격, 소비기한 */}
+                              <div className="grid grid-cols-3 gap-1.5">
+                                <div>
+                                  <span className="text-[7.5px] text-gray-400 block mb-0.5 font-bold">수량</span>
+                                  <input
+                                    type="text"
+                                    value={item.quantity}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setParsedItems(prev => prev.map((p, i) => i === idx ? { ...p, quantity: val } : p));
+                                    }}
+                                    className="w-full bg-white border border-gray-200 rounded px-1 py-0.5 text-gray-700 font-bold focus:outline-none focus:border-brand-green"
+                                    placeholder="수량"
+                                  />
+                                </div>
+                                <div>
+                                  <span className="text-[7.5px] text-gray-400 block mb-0.5 font-bold">금액</span>
+                                  <input
+                                    type="number"
+                                    value={item.price}
+                                    onChange={(e) => {
+                                      const val = Number(e.target.value);
+                                      setParsedItems(prev => prev.map((p, i) => i === idx ? { ...p, price: val } : p));
+                                    }}
+                                    className="w-full bg-white border border-gray-200 rounded px-1 py-0.5 text-gray-700 font-bold focus:outline-none focus:border-brand-green"
+                                    placeholder="가격"
+                                  />
+                                </div>
+                                <div>
+                                  <span className="text-[7.5px] text-gray-400 block mb-0.5 font-bold">소비기한</span>
+                                  <input
+                                    type="date"
+                                    value={item.expiryDate}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setParsedItems(prev => prev.map((p, i) => i === idx ? { ...p, expiryDate: val } : p));
+                                    }}
+                                    className="w-full bg-white border border-gray-200 rounded px-1 py-0.5 text-gray-700 font-bold focus:outline-none focus:border-brand-green"
+                                  />
                                 </div>
                               </div>
                             </div>
                           ))}
                         </div>
 
-                        <div className="bg-brand-green-light p-3 rounded-xl mb-5 flex items-center justify-between text-[10px] text-brand-green font-bold">
-                          <span>총 지출 금액</span>
+                        <div className="bg-brand-green-light p-2.5 rounded-xl mb-3 flex items-center justify-between text-[10px] text-brand-green font-bold">
+                          <span>총 검수 금액</span>
                           <span className="text-xs font-black">{totalReceiptCost.toLocaleString()}원</span>
                         </div>
 
