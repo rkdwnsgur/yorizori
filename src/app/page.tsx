@@ -577,6 +577,8 @@ export default function MainApp() {
     id: string,
     updatedFields: Omit<IngredientItem, 'id' | 'registeredAt' | 'storageId'>
   ) => {
+    const prevItem = items.find(i => i.id === id);
+
     // 로컬 상태 즉시 반영 (Optimistic UI)
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, ...updatedFields } : item))
@@ -600,7 +602,101 @@ export default function MainApp() {
       }
     }
 
-    triggerToast('✏️ 식재료 정보가 성공적으로 수정되었습니다.');
+    // 가계부 지출 내역 자동 동기화
+    if (prevItem) {
+      const prevTitle = `${prevItem.name} 구매`;
+      const newTitle = `${updatedFields.name} 구매`;
+      const prevPrice = prevItem.price;
+      const newPrice = updatedFields.price;
+
+      if (prevPrice > 0 && newPrice > 0) {
+        setExpenses((prev) =>
+          prev.map((exp) =>
+            exp.title === prevTitle && exp.amount === prevPrice
+              ? { ...exp, title: newTitle, amount: newPrice }
+              : exp
+          )
+        );
+
+        if (userId && !userId.startsWith('mock_')) {
+          try {
+            const { data: matchedExpenses } = await supabase
+              .from('expenses')
+              .select('id')
+              .eq('user_id', userId)
+              .eq('title', prevTitle)
+              .eq('amount', prevPrice)
+              .limit(1);
+
+            if (matchedExpenses && matchedExpenses.length > 0) {
+              await supabase
+                .from('expenses')
+                .update({
+                  title: newTitle,
+                  amount: newPrice,
+                })
+                .eq('id', matchedExpenses[0].id);
+            }
+          } catch (err) {
+            console.error('가계부 DB 수정 동기화 에러:', err);
+          }
+        }
+      } else if (prevPrice <= 0 && newPrice > 0) {
+        // 기존 가격이 없었는데 새로 책정된 경우 -> 가계부 지출 항목 자동 생성
+        const expenseDate = new Date().toISOString().split('T')[0];
+        const localExpenseId = `exp_${Date.now()}`;
+        const localExpense: ExpenseRecord = {
+          id: localExpenseId,
+          title: newTitle,
+          amount: newPrice,
+          category: '마트 장보기',
+          date: expenseDate,
+        };
+        setExpenses((prev) => [localExpense, ...prev]);
+
+        if (userId && !userId.startsWith('mock_')) {
+          try {
+            await supabase.from('expenses').insert({
+              title: newTitle,
+              amount: newPrice,
+              category: '마트 장보기',
+              date: expenseDate,
+              user_id: userId
+            });
+          } catch (err) {
+            console.error('가계부 DB 자동 추가 동기화 에러:', err);
+          }
+        }
+      } else if (prevPrice > 0 && newPrice <= 0) {
+        // 기존 가격이 있었는데 0원으로 변경된 경우 -> 가계부 지출 항목 자동 제거
+        setExpenses((prev) =>
+          prev.filter((exp) => !(exp.title === prevTitle && exp.amount === prevPrice))
+        );
+
+        if (userId && !userId.startsWith('mock_')) {
+          try {
+            const { data: matchedExpenses } = await supabase
+              .from('expenses')
+              .select('id')
+              .eq('user_id', userId)
+              .eq('title', prevTitle)
+              .eq('amount', prevPrice)
+              .limit(1);
+
+            if (matchedExpenses && matchedExpenses.length > 0) {
+              await supabase
+                .from('expenses')
+                .delete()
+                .eq('id', matchedExpenses[0].id);
+            }
+          } catch (err) {
+            console.error('가계부 DB 자동 삭제 동기화 에러:', err);
+          }
+        }
+      }
+    }
+
+    triggerToast('✏️ 식품 정보 및 가계부 지출 내역이 연동되어 수정되었습니다.');
   };
 
   // 2. 영수증 기반 다중 추가 (가계부 연동)
