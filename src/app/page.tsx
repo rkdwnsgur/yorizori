@@ -69,63 +69,81 @@ export default function MainApp() {
   const [subscription, setSubscription] = useState<'free' | 'pro'>('free');
 
   // 멀티 보관소 설정 상태
-  const [storages, setStorages] = useState<StorageUnit[]>([
-    { id: 'storage_1', name: '주방 냉장고', type: '냉장고' },
-    { id: 'storage_2', name: '서랍형 냉동고', type: '냉동고' },
-    { id: 'storage_3', name: '김치 냉장고', type: '김치냉장고' },
-    { id: 'storage_4', name: '실온 보관함', type: '실온보관' },
-  ]);
+  const [storages, setStorages] = useState<StorageUnit[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('yorijori_mock_storages');
+      if (saved) return JSON.parse(saved);
+    }
+    return [
+      { id: 'storage_1', name: '주방 냉장고', type: '냉장고' },
+      { id: 'storage_2', name: '서랍형 냉동고', type: '냉동고' },
+      { id: 'storage_3', name: '김치 냉장고', type: '김치냉장고' },
+      { id: 'storage_4', name: '실온 보관함', type: '실온보관' },
+    ];
+  });
   const [currentStorageId, setCurrentStorageId] = useState('storage_1');
 
   // 식재료 상태
-  const [items, setItems] = useState<IngredientItem[]>([
-    {
-      id: 'item_1',
-      name: '양파 3개',
-      quantity: '3개',
-      category: '야채',
-      expiryDate: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0],
-      price: 1500,
-      registeredAt: new Date().toISOString(),
-      storageId: 'storage_1',
-    },
-    {
-      id: 'item_2',
-      name: '서울우유 1L',
-      quantity: '1개',
-      category: '유제품',
-      expiryDate: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
-      price: 2900,
-      registeredAt: new Date().toISOString(),
-      storageId: 'storage_1',
-    },
-    {
-      id: 'item_3',
-      name: '국산 흙당근',
-      quantity: '2개',
-      category: '야채',
-      expiryDate: new Date(Date.now() + 86400000 * 8).toISOString().split('T')[0],
-      price: 1200,
-      registeredAt: new Date().toISOString(),
-      storageId: 'storage_4',
-    },
-    {
-      id: 'item_4',
-      name: '가쓰오 생우동 2인분',
-      quantity: '1봉',
-      category: '가공식품',
-      expiryDate: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0],
-      price: 4800,
-      registeredAt: new Date().toISOString(),
-      storageId: 'storage_1',
-    },
-  ]);
+  const [items, setItems] = useState<IngredientItem[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('yorijori_mock_items');
+      if (saved) return JSON.parse(saved);
+    }
+    return [
+      {
+        id: 'item_1',
+        name: '양파 3개',
+        quantity: '3개',
+        category: '야채',
+        expiryDate: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0],
+        price: 1500,
+        registeredAt: new Date().toISOString(),
+        storageId: 'storage_1',
+      },
+      {
+        id: 'item_2',
+        name: '서울우유 1L',
+        quantity: '1개',
+        category: '유제품',
+        expiryDate: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
+        price: 2900,
+        registeredAt: new Date().toISOString(),
+        storageId: 'storage_1',
+      },
+      {
+        id: 'item_3',
+        name: '국산 흙당근',
+        quantity: '2개',
+        category: '야채',
+        expiryDate: new Date(Date.now() + 86400000 * 8).toISOString().split('T')[0],
+        price: 1200,
+        registeredAt: new Date().toISOString(),
+        storageId: 'storage_4',
+      },
+      {
+        id: 'item_4',
+        name: '가쓰오 생우동 2인분',
+        quantity: '1봉',
+        category: '가공식품',
+        expiryDate: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0],
+        price: 4800,
+        registeredAt: new Date().toISOString(),
+        storageId: 'storage_1',
+      },
+    ];
+  });
 
   // 가계부 지출 상태
-  const [expenses, setExpenses] = useState<ExpenseRecord[]>([
-    { id: 'exp_1', title: '이마트 장보기', amount: 32000, category: '마트 장보기', date: '2026-07-02' },
-    { id: 'exp_2', title: '배민 떡볶이', amount: 16000, category: '배달', date: '2026-07-10' },
-  ]);
+  const [expenses, setExpenses] = useState<ExpenseRecord[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('yorijori_mock_expenses');
+      if (saved) return JSON.parse(saved);
+    }
+    return [
+      { id: 'exp_1', title: '이마트 장보기', amount: 32000, category: '마트 장보기', date: '2026-07-02' },
+      { id: 'exp_2', title: '배민 떡볶이', amount: 16000, category: '배달', date: '2026-07-10' },
+    ];
+  });
 
   // 예산 & 냉파 누적 절약액 상태
   const [budget, setBudget] = useState(300000);
@@ -136,7 +154,13 @@ export default function MainApp() {
   const [purchasedCoupons, setPurchasedCoupons] = useState<string[]>([]);
 
   // 저장된 레시피
-  const [savedRecipes, setSavedRecipes] = useState<Recipe[]>([]);
+  const [savedRecipes, setSavedRecipes] = useState<Recipe[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('yorijori_mock_saved_recipes');
+      if (saved) return JSON.parse(saved);
+    }
+    return [];
+  });
 
   // 알림 상태
   const [notifications, setNotifications] = useState<NotifType[]>([
@@ -265,6 +289,31 @@ export default function MainApp() {
       authSub.unsubscribe();
     };
   }, []);
+
+  // 로컬/가상 모드 상태 변경 시 실시간 캐싱 동기화 (새로고침 보존)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('yorijori_mock_items', JSON.stringify(items));
+    }
+  }, [items]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('yorijori_mock_storages', JSON.stringify(storages));
+    }
+  }, [storages]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('yorijori_mock_expenses', JSON.stringify(expenses));
+    }
+  }, [expenses]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('yorijori_mock_saved_recipes', JSON.stringify(savedRecipes));
+    }
+  }, [savedRecipes]);
 
   // Supabase Database에서 유저 정보 일괄 조회
   const fetchUserData = async (uId: string) => {
