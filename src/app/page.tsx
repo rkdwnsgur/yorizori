@@ -524,6 +524,37 @@ export default function MainApp() {
     triggerToast(`🥦 [${activeSt?.name || '보관소'}] ${newItem.name} 등록 완료!`);
   };
 
+  // 1.5. 식재료 정보 수정
+  const handleUpdateItem = async (
+    id: string,
+    updatedFields: Omit<IngredientItem, 'id' | 'registeredAt' | 'storageId'>
+  ) => {
+    // 로컬 상태 즉시 반영 (Optimistic UI)
+    setItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, ...updatedFields } : item))
+    );
+
+    // Supabase DB 연동
+    if (userId && !userId.startsWith('mock_')) {
+      try {
+        await supabase
+          .from('ingredients')
+          .update({
+            name: updatedFields.name,
+            quantity: updatedFields.quantity,
+            category: updatedFields.category,
+            expiry_date: updatedFields.expiryDate,
+            price: updatedFields.price,
+          })
+          .eq('id', id);
+      } catch (err) {
+        console.error('식재료 DB 수정 에러:', err);
+      }
+    }
+
+    triggerToast('✏️ 식재료 정보가 성공적으로 수정되었습니다.');
+  };
+
   // 2. 영수증 기반 다중 추가 (가계부 연동)
   const handleAddMultipleItems = async (
     newItems: Omit<IngredientItem, 'id' | 'registeredAt' | 'storageId'>[],
@@ -1185,6 +1216,7 @@ export default function MainApp() {
                   onAddStorage={handleAddStorage}
                   onUpdateStorageName={handleUpdateStorageName}
                   onDeleteStorage={handleDeleteStorage}
+                  onUpdateItem={handleUpdateItem}
                 />
               )}
 

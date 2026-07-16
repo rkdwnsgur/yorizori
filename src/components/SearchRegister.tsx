@@ -14,6 +14,7 @@ interface SearchRegisterProps {
   onAddStorage: (name: string, type: StorageUnit['type']) => void;
   onUpdateStorageName: (id: string, name: string) => void;
   onDeleteStorage: (id: string) => void;
+  onUpdateItem: (id: string, updated: Omit<IngredientItem, 'id' | 'registeredAt' | 'storageId'>) => void;
 }
 
 export default function SearchRegister({
@@ -26,6 +27,7 @@ export default function SearchRegister({
   onAddStorage,
   onUpdateStorageName,
   onDeleteStorage,
+  onUpdateItem,
 }: SearchRegisterProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('전체');
@@ -48,6 +50,15 @@ export default function SearchRegister({
   const [manualCat, setManualCat] = useState<'야채' | '육류/해물' | '유제품' | '가공식품' | '기타'>('야채');
   const [manualExpiry, setManualExpiry] = useState('');
   const [manualPrice, setManualPrice] = useState('0');
+
+  // 식재료 수정 폼 상태
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editQty, setEditQty] = useState('');
+  const [editCat, setEditCat] = useState<'야채' | '육류/해물' | '유제품' | '가공식품' | '기타'>('야채');
+  const [editExpiry, setEditExpiry] = useState('');
+  const [editPrice, setEditPrice] = useState('0');
 
   const categories = ['전체', '야채', '육류/해물', '유제품', '가공식품', '기타'];
 
@@ -122,6 +133,34 @@ export default function SearchRegister({
     setManualExpiry('');
     setManualPrice('0');
     setShowManualModal(false);
+  };
+
+  // 수정 진입 핸들러
+  const handleStartEdit = (item: IngredientItem) => {
+    setSelectedItemId(item.id);
+    setEditName(item.name);
+    setEditQty(item.quantity);
+    setEditCat(item.category);
+    setEditExpiry(item.expiryDate);
+    setEditPrice(item.price.toString());
+    setShowEditModal(true);
+  };
+
+  // 수정 완료 제출
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedItemId || !editName.trim() || !editExpiry) return;
+
+    onUpdateItem(selectedItemId, {
+      name: editName,
+      quantity: editQty,
+      category: editCat,
+      expiryDate: editExpiry,
+      price: parseInt(editPrice) || 0,
+    });
+
+    setSelectedItemId(null);
+    setShowEditModal(false);
   };
 
   return (
@@ -359,10 +398,20 @@ export default function SearchRegister({
                           {isExpired ? '만료됨' : dDay === 0 ? '오늘만료' : `D-${dDay}`}
                         </span>
 
+                        {/* 수정 단추 */}
+                        <button
+                          onClick={() => handleStartEdit(item)}
+                          className="text-gray-300 hover:text-brand-green p-1.5 rounded-lg hover:bg-brand-green-light/40 transition-colors"
+                          title="식품 수정"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+
                         {/* 삭제 단추 */}
                         <button
                           onClick={() => onDeleteItem(item.id)}
                           className="text-gray-300 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                          title="식품 삭제"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -587,6 +636,98 @@ export default function SearchRegister({
                 </button>
               </form>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 식재료 수정 모달 */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-45 flex items-center justify-center bg-black/40 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-5 shadow-xl relative text-left">
+            <button
+              onClick={() => {
+                setShowEditModal(false);
+                setSelectedItemId(null);
+              }}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-brand-grey"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h3 className="text-sm font-black text-gray-800 mb-4 flex items-center gap-1.5">
+              <Edit2 className="w-4 h-4 text-brand-green animate-pulse" />
+              보관 식품 정보 수정
+            </h3>
+
+            <form onSubmit={handleEditSubmit} className="flex flex-col gap-3.5">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 mb-1">식품 이름 *</label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full bg-brand-grey py-2.5 px-3 rounded-lg text-xs outline-none text-gray-800"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 mb-1">수량/용량 *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editQty}
+                    onChange={(e) => setEditQty(e.target.value)}
+                    className="w-full bg-brand-grey py-2.5 px-3 rounded-lg text-xs outline-none text-gray-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 mb-1">구매 금액 *</label>
+                  <input
+                    type="number"
+                    required
+                    value={editPrice}
+                    onChange={(e) => setEditPrice(e.target.value)}
+                    className="w-full bg-brand-grey py-2.5 px-3 rounded-lg text-xs outline-none text-gray-800"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 mb-1">카테고리</label>
+                  <select
+                    value={editCat}
+                    onChange={(e) => setEditCat(e.target.value as any)}
+                    className="w-full bg-brand-grey py-2.5 px-3 rounded-lg text-xs outline-none text-gray-800 border-none appearance-none cursor-pointer"
+                  >
+                    <option value="야채">야채</option>
+                    <option value="육류/해물">육류/해물</option>
+                    <option value="유제품">유제품</option>
+                    <option value="가공식품">가공식품</option>
+                    <option value="기타">기타</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 mb-1">소비기한 만료일 *</label>
+                  <input
+                    type="date"
+                    required
+                    value={editExpiry}
+                    onChange={(e) => setEditExpiry(e.target.value)}
+                    className="w-full bg-brand-grey py-2.5 px-3 rounded-lg text-xs outline-none text-gray-800"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="bg-brand-green hover:bg-brand-green-hover text-white text-xs font-bold py-3 rounded-xl mt-3 transition-colors shadow-sm active:scale-97"
+              >
+                식품 정보 수정하기
+              </button>
+            </form>
           </div>
         </div>
       )}
