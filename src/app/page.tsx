@@ -407,6 +407,34 @@ export default function MainApp() {
     };
     setItems((prev) => [localItem, ...prev]);
 
+    // 입력한 식비가 0보다 클 경우 가계부 지출 내역에 자동 연동 등록
+    if (newItem.price > 0) {
+      const expenseDate = new Date().toISOString().split('T')[0];
+      const localExpenseId = `exp_${Date.now()}`;
+      const localExpense: ExpenseRecord = {
+        id: localExpenseId,
+        title: `${newItem.name} 구매`,
+        amount: newItem.price,
+        category: '마트 장보기',
+        date: expenseDate,
+      };
+      setExpenses((prev) => [localExpense, ...prev]);
+
+      if (userId && !userId.startsWith('mock_')) {
+        try {
+          await supabase.from('expenses').insert({
+            title: `${newItem.name} 구매`,
+            amount: newItem.price,
+            category: '마트 장보기',
+            date: expenseDate,
+            user_id: userId
+          });
+        } catch (err) {
+          console.error('식비 가계부 자동 연동 에러:', err);
+        }
+      }
+    }
+
     // Supabase DB 연동
     if (userId && !userId.startsWith('mock_')) {
       try {
