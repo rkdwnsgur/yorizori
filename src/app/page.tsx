@@ -917,6 +917,15 @@ export default function MainApp() {
     triggerToast(`💰 식비 예산 사용 계획이 수정되었습니다.`);
   };
 
+  // 12.5. 예산 및 사용 계획 초기화
+  const handleResetBudget = () => {
+    setBudget(300000);
+    setBudgetStartDate('');
+    setBudgetEndDate('');
+    setBudgetMemo('');
+    triggerToast('💰 예산 사용 계획과 금액이 초기화되었습니다.');
+  };
+
   // 13. 지출 항목 수정 / 신규 가산
   const handleUpdateExpense = async (id: string, updated: { title: string; amount: number; category: ExpenseRecord['category'] }) => {
     const localDate = new Date().toISOString().split('T')[0];
@@ -1256,6 +1265,7 @@ export default function MainApp() {
                   onUpdateBudget={handleUpdateBudget}
                   onUpdateExpense={handleUpdateExpense}
                   onDeleteExpense={handleDeleteExpense}
+                  onResetBudget={handleResetBudget}
                 />
               )}
 

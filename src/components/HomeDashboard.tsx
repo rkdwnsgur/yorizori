@@ -20,6 +20,7 @@ interface HomeDashboardProps {
   onUpdateBudget?: (amount: number, startDate?: string, endDate?: string, memo?: string) => void;
   onUpdateExpense?: (id: string, updated: { title: string; amount: number; category: ExpenseRecord['category'] }) => void;
   onDeleteExpense?: (id: string) => void;
+  onResetBudget?: () => void;
 }
 
 export default function HomeDashboard({
@@ -38,6 +39,7 @@ export default function HomeDashboard({
   onUpdateBudget,
   onUpdateExpense,
   onDeleteExpense,
+  onResetBudget,
 }: HomeDashboardProps) {
 
   // 예산 편집 상태
@@ -78,12 +80,56 @@ export default function HomeDashboard({
     })
     .sort((a, b) => getDDay(a.expiryDate) - getDDay(b.expiryDate));
 
-  // 이번 달 총 지출 및 퍼센티지 계산
-  const currentMonthExpenses = expenses.reduce((acc, curr) => acc + curr.amount, 0);
-  const expensePercentage = budget > 0 ? Math.min(Math.round((currentMonthExpenses / budget) * 100), 100) : 0;
+  // 기간별 필터 상태 (주간, 월간, 연간)
+  const [periodFilter, setPeriodFilter] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
 
-  // 카테고리별 지출 합계
-  const categoryExpenses = expenses.reduce(
+  // 이번 달 총 지출 (고정값 계산 유지 - UI 기타 부분의 호환성을 위해)
+  const currentMonthExpenses = expenses.reduce((acc, curr) => acc + curr.amount, 0);
+
+  // 기간 필터에 따른 지출 내역 계산
+  const getFilteredExpenses = () => {
+    const today = new Date();
+    return expenses.filter(exp => {
+      const expDate = new Date(exp.date);
+      
+      // 밀리초 기준 차이 계산
+      const diffTime = today.getTime() - expDate.getTime();
+      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+      if (periodFilter === 'weekly') {
+        return diffDays >= 0 && diffDays <= 7; // 최근 7일
+      } else if (periodFilter === 'monthly') {
+        // 같은 년도와 같은 월 (이번 달)
+        return expDate.getFullYear() === today.getFullYear() && expDate.getMonth() === today.getMonth();
+      } else {
+        // 같은 년도 (올해)
+        return expDate.getFullYear() === today.getFullYear();
+      }
+    });
+  };
+
+  const filteredPeriodExpenses = getFilteredExpenses();
+  const periodExpensesSum = filteredPeriodExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+
+  // 기간에 비례한 예산 스케일링 설정
+  const periodBudget = periodFilter === 'weekly' 
+    ? Math.round(budget / 4) 
+    : periodFilter === 'yearly' 
+    ? budget * 12 
+    : budget;
+
+  const periodBudgetLabel = periodFilter === 'weekly'
+    ? '주간 권장 예산'
+    : periodFilter === 'yearly'
+    ? '연간 목표 예산'
+    : '이번 달 목표 예산';
+
+  const expensePercentage = periodBudget > 0 
+    ? Math.min(Math.round((periodExpensesSum / periodBudget) * 100), 100) 
+    : 0;
+
+  // 카테고리별 지출 합계 (기간 필터 반영)
+  const categoryExpenses = filteredPeriodExpenses.reduce(
     (acc, curr) => {
       acc[curr.category] = (acc[curr.category] || 0) + curr.amount;
       return acc;
@@ -258,8 +304,23 @@ export default function HomeDashboard({
           )}
         </div>
       ) : (
-        /* --- 2. 식비 가계부 대시보드 탭 (수정/삭제 추가) --- */
         <div className="flex flex-col gap-6 animate-fade-in text-left">
+          {/* 기간 필터 스위치 탭 */}
+          <div className="flex bg-brand-grey p-1 rounded-xl self-start">
+            {(['weekly', 'monthly', 'yearly'] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setPeriodFilter(mode)}
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all ${
+                  periodFilter === mode
+                    ? 'bg-white text-brand-green shadow-xs'
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                {mode === 'weekly' ? '주간 (7일)' : mode === 'monthly' ? '월간 (이번달)' : '연간 (올해)'}
+              </button>
+            ))}
+          </div>
           
           {/* A. 이번 달 예산 게이지 카드 (클릭하여 편집할 수 있도록 커서 포인터 및 이벤트 바인딩) */}
           <div
@@ -276,11 +337,11 @@ export default function HomeDashboard({
               <Edit2 className="w-3.5 h-3.5" />
             </div>
             
-            <h3 className="text-xs font-semibold text-gray-400 tracking-wider mb-2">MONTHLY BUDGET (클릭하여 계획 수정)</h3>
+            <h3 className="text-xs font-semibold text-gray-400 tracking-wider mb-2">BUDGET PLAN ({periodFilter === 'weekly' ? '주간' : periodFilter === 'yearly' ? '연간' : '월간'} • 클릭하여 설정)</h3>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-lg font-bold text-gray-800">식비 예산 사용 계획</span>
+              <span className="text-lg font-bold text-gray-800">{periodBudgetLabel}</span>
               <span className="text-xs text-gray-500">
-                <strong className="text-gray-800 font-extrabold">{currentMonthExpenses.toLocaleString()}원</strong> / {budget.toLocaleString()}원
+                <strong className="text-gray-800 font-extrabold">{periodExpensesSum.toLocaleString()}원</strong> / {periodBudget.toLocaleString()}원
               </span>
             </div>
 
@@ -294,7 +355,7 @@ export default function HomeDashboard({
             </div>
 
             <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>남은 예산: {(budget - currentMonthExpenses).toLocaleString()}원</span>
+              <span>남은 예산: {Math.max(0, periodBudget - periodExpensesSum).toLocaleString()}원</span>
               <span className={`font-bold ${expensePercentage >= 85 ? 'text-brand-coral' : 'text-brand-green'}`}>
                 {expensePercentage}% 사용
               </span>
@@ -504,12 +565,32 @@ export default function HomeDashboard({
                 />
               </div>
               
-              <button
-                type="submit"
-                className="bg-brand-green hover:bg-brand-green-hover text-white text-xs font-bold py-2.5 rounded-xl transition-colors shadow-sm"
-              >
-                예산 사용 계획 저장
-              </button>
+              <div className="flex flex-col gap-2 mt-2">
+                <button
+                  type="submit"
+                  className="w-full bg-brand-green hover:bg-brand-green-hover text-white text-xs font-bold py-2.5 rounded-xl transition-colors shadow-sm"
+                >
+                  예산 사용 계획 저장
+                </button>
+                {onResetBudget && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm('설정하신 예산 금액과 사용 기간 및 각오를 모두 초기화하시겠습니까?')) {
+                        onResetBudget();
+                        setBudgetInput('300000');
+                        setBudgetStartInput('');
+                        setBudgetEndInput('');
+                        setBudgetMemoInput('');
+                        setShowBudgetModal(false);
+                      }
+                    }}
+                    className="w-full border border-gray-300 hover:bg-gray-50 text-gray-500 text-xs font-bold py-2.5 rounded-xl transition-colors text-center"
+                  >
+                    계획 초기화
+                  </button>
+                )}
+              </div>
             </form>
           </div>
         </div>
