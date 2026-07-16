@@ -195,7 +195,7 @@ Do not output anything other than the JSON object. All text fields in the JSON m
     {
       name: '백종원 양파 덮밥',
       source: '만개의레시피',
-      requiredIngredients: ['양파', '달걀'],
+      requiredIngredients: ['양파', '달걀', '계란'],
       allIngredients: ['양파 1개', '달걀 2개', '대파 1/2대', '진간장 2스푼', '설탕 1스푼', '맛술 2스푼', '물 3스푼'],
       instructions: [
         '양파는 얇게 채 썰고 대파는 송송 썰어 준비합니다.',
@@ -209,7 +209,7 @@ Do not output anything other than the JSON object. All text fields in the JSON m
     {
       name: '백종원 달걀국',
       source: '백종원 요리비책',
-      requiredIngredients: ['달걀', '대파'],
+      requiredIngredients: ['달걀', '계란', '대파'],
       allIngredients: ['달걀 2알', '대파 1/2대', '국간장 1스푼', '다진 마늘 1/2스푼', '소금 약간', '후추 약간'],
       instructions: [
         '대파는 얇게 송송 썰어 두고 달걀은 그릇에 곱게 풀어 둡니다.',
@@ -222,7 +222,7 @@ Do not output anything other than the JSON object. All text fields in the JSON m
     {
       name: '백종원 김치볶음밥',
       source: '백종원 요리비책',
-      requiredIngredients: ['김치', '대파', '햄'],
+      requiredIngredients: ['김치', '대파'],
       allIngredients: ['신김치 1컵', '대파 1/2대', '식용유 2스푼', '진간장 1스푼', '고춧가루 1/2스푼', '설탕 1/2스푼', '밥 1공기', '달걀 1알'],
       instructions: [
         '신김치는 잘게 가위로 썰고 대파는 송송 썰어 준비합니다.',
@@ -258,6 +258,34 @@ Do not output anything other than the JSON object. All text fields in the JSON m
         '조림 국물이 반으로 줄어들 때까지 중불에서 졸이다가 대파와 들기름을 끼얹어 마무리합니다.'
       ],
       savingsAmount: 5500
+    },
+    {
+      name: '백종원 오이무침',
+      source: '백종원 요리비책',
+      requiredIngredients: ['오이'],
+      allIngredients: ['오이 1개', '양파 1/4개', '고추장 1스푼', '고춧가루 1스푼', '진간장 1스푼', '설탕 1스푼', '식초 2스푼', '다진 마늘 1/2스푼', '통깨 약간'],
+      instructions: [
+        '오이를 깨끗이 씻어 한입 크기로 적당한 두께로 썰어 줍니다.',
+        '양파는 가볍게 채 썰어 둡니다.',
+        '볼에 고추장, 고춧가루, 진간장, 설탕, 식초, 다진 마늘을 넣고 잘 섞어 양념장을 만듭니다.',
+        '준비한 오이와 양파를 넣고 양념에 골고루 조물조물 무쳐 냅니다.',
+        '마지막에 통깨를 뿌려 완성합니다.'
+      ],
+      savingsAmount: 3000
+    },
+    {
+      name: '백종원 어묵볶음',
+      source: '백종원 요리비책',
+      requiredIngredients: ['어묵', '오뎅'],
+      allIngredients: ['사각어묵 4장', '양파 1/2개', '대파 1/2대', '진간장 2스푼', '설탕 1/2스푼', '다진 마늘 1/2스푼', '물 3스푼', '참기름 1스푼', '통깨'],
+      instructions: [
+        '어묵은 먹기 좋은 크기로 썰고 양파는 채 썰고 대파는 어슷 썹니다.',
+        '팬에 식용유를 두르고 다진 마늘과 대파를 넣어 향을 냅니다.',
+        '어묵과 양파를 넣고 가볍게 볶아 줍니다.',
+        '진간장, 설탕, 물을 섞어 부어 양념이 고루 배도록 졸이듯 볶습니다.',
+        '불을 끈 후 참기름과 통깨를 둘러 볶아 마무리합니다.'
+      ],
+      savingsAmount: 4000
     }
   ];
 
@@ -271,16 +299,46 @@ Do not output anything other than the JSON object. All text fields in the JSON m
     const urgentItems = items.filter(it => getDDay(it.expiryDate) <= 3);
     const urgentNames = urgentItems.map(it => it.name.split(' ')[0].replace(/[0-9]/g, '').trim());
 
-    // 2. 소비기한 임박 재료 사용 레시피 필터링
+    // ----------------------------------------------------
+    // [1순위] 사용자의 구체적인 특정 식재료 질문 매칭
+    // ----------------------------------------------------
+    const targetIngredients = ['오이', '감자', '양파', '달걀', '계란', '대파', '김치', '당근', '두부', '어묵', '오뎅', '스팸', '햄'];
+    const detectedIngredient = targetIngredients.find(ing => input.includes(ing));
+
+    if (detectedIngredient) {
+      const matchedRecipe = VERIFIED_RECIPE_DB.find(recipe =>
+        recipe.requiredIngredients.some(req => detectedIngredient.includes(req.toLowerCase()) || req.toLowerCase().includes(detectedIngredient))
+      );
+
+      if (matchedRecipe) {
+        return {
+          text: `💡 말씀하신 [${detectedIngredient}] 재료가 포함된 실존 레시피 [${matchedRecipe.name}]를 안내해 드립니다! 맛있게 요리해 보세요. (출처: ${matchedRecipe.source})`,
+          recipe: {
+            id: `local_rec_v_${Date.now()}`,
+            name: matchedRecipe.name,
+            ingredients: matchedRecipe.allIngredients,
+            instructions: matchedRecipe.instructions,
+            savingsAmount: matchedRecipe.savingsAmount,
+          }
+        };
+      } else {
+        return {
+          text: `💡 현재 요리조리 레시피 요정 사전에 [${detectedIngredient}] 관련 검증된 레시피가 등록되어 있지 않습니다. 대신 냉장고에 보관 중이신 다른 재료(양파, 대파 등)로 맛있는 백종원 레시피를 찾아드릴까요?`
+        };
+      }
+    }
+
+    // ----------------------------------------------------
+    // [2순위] 소비기한 임박 재료 사용 레시피 필터링
+    // ----------------------------------------------------
     if (isAskingUrgent && urgentItems.length > 0) {
-      // 임박 재료를 주재료로 포함하고 있는 인터넷 실존 레시피 검색
       const matchedRecipe = VERIFIED_RECIPE_DB.find(recipe => 
         recipe.requiredIngredients.some(req => urgentNames.some(uName => uName.includes(req)))
       );
 
       if (matchedRecipe) {
         return {
-          text: `💡 (인터넷 실존 레시피 연동) 현재 냉장고에 소비기한이 임박한 식재료(${urgentNames.join(', ')})가 감지되어, 이를 최우선으로 구출하여 소진할 수 있는 [${matchedRecipe.name}] 레시피를 제안해 드립니다. (출처: ${matchedRecipe.source})`,
+          text: `💡 현재 냉장고에 소비기한이 임박한 식재료(${urgentNames.join(', ')})가 감지되어, 이를 최우선으로 소진할 수 있는 [${matchedRecipe.name}] 레시피를 제안해 드립니다. (출처: ${matchedRecipe.source})`,
           recipe: {
             id: `local_rec_v_${Date.now()}`,
             name: matchedRecipe.name,
@@ -292,32 +350,16 @@ Do not output anything other than the JSON object. All text fields in the JSON m
       }
     }
 
-    // 3. 사용자가 입력한 식재료명 대조 매칭
-    const queryMatchedRecipe = VERIFIED_RECIPE_DB.find(recipe =>
-      recipe.requiredIngredients.some(req => input.includes(req.toLowerCase()))
-    );
-
-    if (queryMatchedRecipe) {
-      return {
-        text: `💡 (인터넷 실존 레시피 연동) 말씀하신 재료가 포함된 인기 레시피인 [${queryMatchedRecipe.name}] 조리법을 안내해 드립니다. (출처: ${queryMatchedRecipe.source})`,
-        recipe: {
-          id: `local_rec_v_${Date.now()}`,
-          name: queryMatchedRecipe.name,
-          ingredients: queryMatchedRecipe.allIngredients,
-          instructions: queryMatchedRecipe.instructions,
-          savingsAmount: queryMatchedRecipe.savingsAmount,
-        }
-      };
-    }
-
-    // 4. 일반 매칭 (냉장고 보유 재료 중 매칭)
+    // ----------------------------------------------------
+    // [3순위] 일반 매칭 (냉장고 보유 재료 중 매칭)
+    // ----------------------------------------------------
     const holdMatchedRecipe = VERIFIED_RECIPE_DB.find(recipe =>
       recipe.requiredIngredients.some(req => userIngredients.some(uName => uName.includes(req)))
     );
 
     if (holdMatchedRecipe) {
       return {
-        text: `💡 (인터넷 실존 레시피 연동) 냉장고에 보관 중이신 재료를 기반으로 구성한 [${holdMatchedRecipe.name}] 레시피를 제안해 드립니다. (출처: ${holdMatchedRecipe.source})`,
+        text: `💡 냉장고에 보관 중이신 재료를 기반으로 구성한 [${holdMatchedRecipe.name}] 레시피를 제안해 드립니다. (출처: ${holdMatchedRecipe.source})`,
         recipe: {
           id: `local_rec_v_${Date.now()}`,
           name: holdMatchedRecipe.name,
@@ -328,10 +370,12 @@ Do not output anything other than the JSON object. All text fields in the JSON m
       };
     }
 
-    // 5. 기본 실존 레시피 폴백 (백종원 김치볶음밥)
+    // ----------------------------------------------------
+    // [4순위] 기본 실존 레시피 폴백 (백종원 김치볶음밥)
+    // ----------------------------------------------------
     const defaultRecipe = VERIFIED_RECIPE_DB[3]; // 백종원 김치볶음밥
     return {
-      text: `💡 (인터넷 실존 레시피 연동) 냉장고의 잔여 식재료들을 효율적으로 소비하기 좋은 대중적인 인기 요리인 [${defaultRecipe.name}] 레시피입니다. (출처: ${defaultRecipe.source})`,
+      text: `💡 냉장고의 잔여 식재료들을 효율적으로 소비하기 좋은 대중적인 인기 요리인 [${defaultRecipe.name}] 레시피입니다. (출처: ${defaultRecipe.source})`,
       recipe: {
         id: `local_rec_v_${Date.now()}`,
         name: defaultRecipe.name,
@@ -340,6 +384,7 @@ Do not output anything other than the JSON object. All text fields in the JSON m
         savingsAmount: defaultRecipe.savingsAmount,
       }
     };
+
   };
 
   // 메시지 전송
