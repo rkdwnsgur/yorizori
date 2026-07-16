@@ -179,32 +179,90 @@ Do not output anything other than the JSON object. All text fields in the JSON m
   // 로컬 폴백 응답 발전형
   const fallbackLocalResponse = (userText: string): { text: string; recipe?: Recipe } => {
     const input = userText.toLowerCase();
-    
-    if (input.includes('브로콜리')) {
+    const isAskingUrgent = input.includes('임박') || input.includes('소비기한') || input.includes('유통기한') || input.includes('상하') || input.includes('빨리 먹') || input.includes('구출');
+
+    // 1) 소비기한 임박 식재료를 조회하는 경우
+    if (isAskingUrgent) {
+      const urgentItems = items.filter(it => {
+        const dDay = getDDay(it.expiryDate);
+        return dDay <= 3;
+      });
+
+      if (urgentItems.length > 0) {
+        const itemNames = urgentItems.map(it => it.name.split(' ')[0]); // "양파 3개" -> "양파"
+        const title = `${itemNames.join(', ')} 구출 모둠전`;
+        const recipeIngredients = [
+          ...urgentItems.map(it => `${it.name} (${it.quantity})`),
+          '부침가루 1컵',
+          '찬물 1/2컵',
+          '식용유 약간'
+        ];
+
+        return {
+          text: `💡 (💡 냉장고 데이터 실시간 분석) 현재 냉장고에 소비기한이 임박하거나 지난 식재료(${itemNames.join(', ')})가 확인되어, 이를 빠르게 소진할 수 있는 [${title}] 레시피를 제안해 드립니다. 상하기 전에 어서 조리해 보세요!`,
+          recipe: {
+            id: `local_rec_urg_${Date.now()}`,
+            name: title,
+            ingredients: recipeIngredients,
+            instructions: [
+              '소비기한이 임박한 식재료들을 깨끗이 씻은 후 채썰어 준비합니다.',
+              '볼에 부침가루 1컵과 찬물 1/2컵을 섞어 부드럽게 반죽을 만듭니다.',
+              '반죽에 썰어둔 야채 및 임박 재료들을 넣고 가볍게 버무립니다.',
+              '달궈진 팬에 식용유를 넉넉히 두르고 앞뒤로 노릇하고 바삭하게 구워내 완성합니다.'
+            ],
+            savingsAmount: 6000,
+          }
+        };
+      } else {
+        return {
+          text: `💡 (💡 냉장고 데이터 실시간 분석) 확인해 보니 현재 냉장고에는 소비기한이 3일 이하로 남은 임박 식품이 전혀 없이 신선하게 잘 유지되고 있습니다! 대신 보관 중인 재료로 만들기 편한 별미 비빔면을 추천해 드립니다.`,
+          recipe: {
+            id: `local_rec_fresh_${Date.now()}`,
+            name: '새콤달콤 비빔소면',
+            ingredients: ['소면 1인분', '초고추장 2스푼', '오이 1/4개', '통깨 약간'],
+            instructions: [
+              '끓는 물에 소면을 삶은 뒤 곧바로 찬물에 여러 번 헹궈 물기를 뺍니다.',
+              '그릇에 면을 담고 초고추장 2스푼을 가볍게 넣어 비빕니다.',
+              '고명으로 신선한 오이채를 송송 썰어 얹고 통깨를 뿌려 완성합니다.'
+            ],
+            savingsAmount: 3000,
+          }
+        };
+      }
+    }
+
+    // 2) 특정 식품명 대조 매칭
+    const matchedItem = items.find(it => {
+      const cleanName = it.name.split(' ')[0].replace(/[0-9]/g, '').trim(); // 숫자 제거
+      return cleanName.length >= 2 && input.includes(cleanName);
+    });
+
+    if (matchedItem) {
+      const cleanName = matchedItem.name.split(' ')[0];
+      const title = `초간단 ${cleanName} 볶음`;
       return {
-        text: `(💡 로컬 임시 모드) 브로콜리를 구출할 수 있는 마늘 브로콜리 베이컨 볶음 레시피입니다.`,
+        text: `💡 (💡 냉장고 데이터 실시간 분석) 사용 중이신 냉장고에서 [${matchedItem.name}] 재료가 조회되어, 이를 활용해 빠르게 만들 수 있는 [${title}] 레시피를 준비했습니다.`,
         recipe: {
-          id: `local_rec_b_${Date.now()}`,
-          name: '마늘 브로콜리 베이컨 볶음',
-          ingredients: ['브로콜리 1송이', '베이컨 3장', '통마늘 5알'],
+          id: `local_rec_match_${Date.now()}`,
+          name: title,
+          ingredients: [`${matchedItem.name} (${matchedItem.quantity})`, '진간장 1스푼', '참기름 1/2스푼', '식용유'],
           instructions: [
-            '브로콜리를 한 입 크기로 떼어내 끓는 물에 소금 1/2스푼을 넣고 30초 데친 뒤 찬물에 헹굽니다.',
-            '마늘은 편으로 썰고 베이컨은 적당한 크기로 썹니다.',
-            '올리브유를 두른 팬에 마늘을 볶다 베이컨을 넣어 굽습니다.',
-            '데친 브로콜리를 넣고 중불에 가볍게 저어가며 소금, 후추로 간을 합니다.'
+            `${cleanName}을(를) 깨끗이 다듬어 한 입 크기로 썰어 줍니다.`,
+            '팬에 식용유를 한 바퀴 두르고 썰어둔 재료를 넣어 중불에서 고루 볶습니다.',
+            '간장 1스푼으로 간을 맞추고, 불을 끈 뒤 참기름을 가볍게 두르고 그릇에 담아 완성합니다.'
           ],
-          savingsAmount: 7000,
+          savingsAmount: 4000,
         }
       };
     }
 
-    // 기본 폴백 볶음밥
+    // 3) 기본 볶음밥 폴백
     return {
-      text: `(💡 로컬 임시 모드) 냉장고의 기본 재료들을 털어 만들 수 있는 초간단 계란 야채 볶음밥 레시피를 제안해 드립니다.`,
+      text: `💡 (💡 냉장고 데이터 실시간 분석) 냉장고 안의 기본 식재료들을 털어 만들 수 있는 초간단 계란 야채 볶음밥 레시피를 제안해 드립니다.`,
       recipe: {
         id: `local_rec_r_${Date.now()}`,
         name: '초간단 계란 야채 볶음밥',
-        ingredients: ['찬밥 1공기', '달걀 1알', '대파 1/4대', '남은 야채 약간'],
+        ingredients: ['찬밥 1공기', '달걀 1알', '대파 1/4대', '소금 한 꼬집'],
         instructions: [
           '대파를 쫑쫑 썰어 식용유 2스푼을 두른 팬에 볶아 파기름을 냅니다.',
           '달걀 1알을 풀어 스크램블을 만들어 밥과 함께 볶습니다.',
