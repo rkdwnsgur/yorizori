@@ -9,12 +9,15 @@ interface HomeDashboardProps {
   expenses: ExpenseRecord[];
   badges: BadgeTitle[];
   budget: number;
+  budgetStartDate?: string;
+  budgetEndDate?: string;
+  budgetMemo?: string;
   totalSaved: number;
   onNavigateToTab: (tab: 'home' | 'search' | 'notification' | 'mypage') => void;
   onSelectRecipe: (ingredients: string[]) => void;
   activeSubTab?: 'fridge' | 'ledger';
   onSubTabChange?: (tab: 'fridge' | 'ledger') => void;
-  onUpdateBudget?: (amount: number) => void;
+  onUpdateBudget?: (amount: number, startDate?: string, endDate?: string, memo?: string) => void;
   onUpdateExpense?: (id: string, updated: { title: string; amount: number; category: ExpenseRecord['category'] }) => void;
   onDeleteExpense?: (id: string) => void;
 }
@@ -24,6 +27,9 @@ export default function HomeDashboard({
   expenses,
   badges,
   budget,
+  budgetStartDate = '',
+  budgetEndDate = '',
+  budgetMemo = '',
   totalSaved,
   onNavigateToTab,
   onSelectRecipe,
@@ -37,6 +43,9 @@ export default function HomeDashboard({
   // 예산 편집 상태
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [budgetInput, setBudgetInput] = useState(budget.toString());
+  const [budgetStartInput, setBudgetStartInput] = useState(budgetStartDate);
+  const [budgetEndInput, setBudgetEndInput] = useState(budgetEndDate);
+  const [budgetMemoInput, setBudgetMemoInput] = useState(budgetMemo);
 
   // 지출 항목 편집 상태
   const [showExpenseModal, setShowExpenseModal] = useState(false);
@@ -93,7 +102,9 @@ export default function HomeDashboard({
     e.preventDefault();
     const parsed = parseInt(budgetInput);
     if (isNaN(parsed) || parsed <= 0) return;
-    if (onUpdateBudget) onUpdateBudget(parsed);
+    if (onUpdateBudget) {
+      onUpdateBudget(parsed, budgetStartInput, budgetEndInput, budgetMemoInput);
+    }
     setShowBudgetModal(false);
   };
 
@@ -254,6 +265,9 @@ export default function HomeDashboard({
           <div
             onClick={() => {
               setBudgetInput(budget.toString());
+              setBudgetStartInput(budgetStartDate || '');
+              setBudgetEndInput(budgetEndDate || '');
+              setBudgetMemoInput(budgetMemo || '');
               setShowBudgetModal(true);
             }}
             className="bg-white p-5 rounded-2xl border border-brand-grey shadow-sm cursor-pointer hover:border-brand-green/30 hover:shadow-xs transition-all relative group"
@@ -262,9 +276,9 @@ export default function HomeDashboard({
               <Edit2 className="w-3.5 h-3.5" />
             </div>
             
-            <h3 className="text-xs font-semibold text-gray-400 tracking-wider mb-2">MONTHLY BUDGET (클릭하여 수정)</h3>
+            <h3 className="text-xs font-semibold text-gray-400 tracking-wider mb-2">MONTHLY BUDGET (클릭하여 계획 수정)</h3>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-lg font-bold text-gray-800">이번 달 식비 예산 현황</span>
+              <span className="text-lg font-bold text-gray-800">식비 예산 사용 계획</span>
               <span className="text-xs text-gray-500">
                 <strong className="text-gray-800 font-extrabold">{currentMonthExpenses.toLocaleString()}원</strong> / {budget.toLocaleString()}원
               </span>
@@ -285,6 +299,26 @@ export default function HomeDashboard({
                 {expensePercentage}% 사용
               </span>
             </div>
+
+            {/* 예산 사용 계획 세부 요약 */}
+            {(budgetStartDate || budgetEndDate || budgetMemo) && (
+              <div className="mt-4 pt-3.5 border-t border-brand-grey text-[10px] text-gray-500 flex flex-col gap-1.5 font-bold">
+                {(budgetStartDate || budgetEndDate) && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-brand-green">📅 계획 기간:</span>
+                    <span className="text-gray-700">
+                      {budgetStartDate || '미지정'} ~ {budgetEndDate || '미지정'}
+                    </span>
+                  </div>
+                )}
+                {budgetMemo && (
+                  <div className="flex items-start gap-1">
+                    <span className="text-brand-green flex-shrink-0">📝 사용 계획:</span>
+                    <span className="text-gray-700 font-medium italic">"{budgetMemo}"</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* B. 카테고리별 식비 소비 카드 (카테고리를 클릭하여 간편 지출 금액을 가산/수정할 수 있도록 고도화) */}
@@ -423,11 +457,11 @@ export default function HomeDashboard({
               <X className="w-5 h-5" />
             </button>
             
-            <h4 className="text-sm font-extrabold text-gray-850 mb-3.5">식비 목표 예산 수정</h4>
+            <h4 className="text-sm font-extrabold text-gray-850 mb-3.5">식비 목표 예산 및 사용 계획 수정</h4>
             
             <form onSubmit={handleBudgetSubmit} className="flex flex-col gap-3.5">
               <div>
-                <label className="block text-[10px] font-bold text-gray-400 mb-1">새로운 예산 금액 (원) *</label>
+                <label className="block text-[10px] font-bold text-gray-400 mb-1">목표 예산 금액 (원) *</label>
                 <input
                   type="number"
                   required
@@ -437,12 +471,44 @@ export default function HomeDashboard({
                   className="w-full bg-brand-grey py-2.5 px-3 rounded-lg text-xs outline-none font-bold text-gray-800"
                 />
               </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 mb-1">계획 시작일</label>
+                  <input
+                    type="date"
+                    value={budgetStartInput}
+                    onChange={(e) => setBudgetStartInput(e.target.value)}
+                    className="w-full bg-brand-grey py-2 px-2 rounded-lg text-[10px] outline-none font-bold text-gray-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 mb-1">계획 종료일</label>
+                  <input
+                    type="date"
+                    value={budgetEndInput}
+                    onChange={(e) => setBudgetEndInput(e.target.value)}
+                    className="w-full bg-brand-grey py-2 px-2 rounded-lg text-[10px] outline-none font-bold text-gray-800"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 mb-1">식비 절약 계획 / 각오</label>
+                <textarea
+                  placeholder="예: 외식 최소화, 남은 재료 위주 냉장고 털기!"
+                  value={budgetMemoInput}
+                  onChange={(e) => setBudgetMemoInput(e.target.value)}
+                  rows={2}
+                  className="w-full bg-brand-grey py-2 px-3 rounded-lg text-xs outline-none font-medium text-gray-700 resize-none"
+                />
+              </div>
               
               <button
                 type="submit"
                 className="bg-brand-green hover:bg-brand-green-hover text-white text-xs font-bold py-2.5 rounded-xl transition-colors shadow-sm"
               >
-                예산 변경사항 저장
+                예산 사용 계획 저장
               </button>
             </form>
           </div>

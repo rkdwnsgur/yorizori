@@ -146,7 +146,31 @@ export default function MainApp() {
   });
 
   // 예산 & 냉파 누적 절약액 상태
-  const [budget, setBudget] = useState(300000);
+  const [budget, setBudget] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('yorijori_mock_budget');
+      if (saved) return parseInt(saved);
+    }
+    return 300000;
+  });
+  const [budgetStartDate, setBudgetStartDate] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('yorijori_mock_budget_start') || '';
+    }
+    return '';
+  });
+  const [budgetEndDate, setBudgetEndDate] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('yorijori_mock_budget_end') || '';
+    }
+    return '';
+  });
+  const [budgetMemo, setBudgetMemo] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('yorijori_mock_budget_memo') || '';
+    }
+    return '';
+  });
   const [totalSaved, setTotalSaved] = useState(34000);
 
   // 포인트 몰 소비 및 쿠폰
@@ -314,6 +338,30 @@ export default function MainApp() {
       localStorage.setItem('yorijori_mock_saved_recipes', JSON.stringify(savedRecipes));
     }
   }, [savedRecipes]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('yorijori_mock_budget', budget.toString());
+    }
+  }, [budget]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('yorijori_mock_budget_start', budgetStartDate);
+    }
+  }, [budgetStartDate]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('yorijori_mock_budget_end', budgetEndDate);
+    }
+  }, [budgetEndDate]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('yorijori_mock_budget_memo', budgetMemo);
+    }
+  }, [budgetMemo]);
 
   // Supabase Database에서 유저 정보 일괄 조회
   const fetchUserData = async (uId: string) => {
@@ -860,10 +908,13 @@ export default function MainApp() {
     triggerToast(`🎁 [${productName}] 교환권 보관함에 즉시 지급!`);
   };
 
-  // 12. 예산 수정
-  const handleUpdateBudget = (amount: number) => {
+  // 12. 예산 및 사용 계획 수정
+  const handleUpdateBudget = (amount: number, startDate?: string, endDate?: string, memo?: string) => {
     setBudget(amount);
-    triggerToast(`💰 이번 달 식비 예산이 ${amount.toLocaleString()}원으로 수정되었습니다.`);
+    if (startDate !== undefined) setBudgetStartDate(startDate || '');
+    if (endDate !== undefined) setBudgetEndDate(endDate || '');
+    if (memo !== undefined) setBudgetMemo(memo || '');
+    triggerToast(`💰 식비 예산 사용 계획이 수정되었습니다.`);
   };
 
   // 13. 지출 항목 수정 / 신규 가산
@@ -1189,6 +1240,9 @@ export default function MainApp() {
                   expenses={expenses}
                   badges={badges}
                   budget={budget}
+                  budgetStartDate={budgetStartDate}
+                  budgetEndDate={budgetEndDate}
+                  budgetMemo={budgetMemo}
                   totalSaved={totalSaved}
                   activeSubTab={homeSubTab}
                   onSubTabChange={(tab) => setHomeSubTab(tab)}
